@@ -1,0 +1,67 @@
+plugins {
+	id 'java'
+	id 'application'
+	id 'io.freefair.lombok' version 'latest.release'
+	id 'me.champeau.jmh' version 'latest.release'
+}
+
+repositories {
+	mavenLocal()
+	mavenCentral {
+		mavenContent { releasesOnly() }
+	}
+	google()
+	maven { url 'https://jitpack.io' }
+}
+
+application {
+	mainClass = 'benchmark.JacksonBase64'
+}
+
+dependencies {
+	implementation("com.google.code.findbugs:jsr305:latest.release")
+
+	jmh 'org.openjdk.jmh:jmh-core:1.+'
+	jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.+'
+	jmhAnnotationProcessor('org.openjdk.jmh:jmh-generator-annprocess:1.+')
+	annotationProcessor('org.openjdk.jmh:jmh-generator-annprocess:1.+') // 🤷‍♀️
+
+	implementation 'org.openjdk.jmh:jmh-core:1.+'
+	implementation 'org.openjdk.jmh:jmh-generator-annprocess:1.+'
+
+	implementation("com.google.guava:guava:latest.release")
+	implementation("org.apache.commons:commons-lang3:latest.release")
+	implementation("org.slf4j:slf4j-api:1.7.+")
+	implementation("ch.qos.logback:logback-classic:1.2.+")
+	implementation("org.springframework:spring-test:5.+")
+	implementation("io.vertx:vertx-core:4.+")
+	implementation("io.smallrye:smallrye-fault-tolerance-mutiny:latest.release")
+	implementation("io.smallrye.reactive:mutiny:latest.release",
+		"io.smallrye.reactive:mutiny-zero-vertx-publishers:latest.release")// ⇒ io.smallrye.reactive:mutiny-zero
+
+	implementation("com.fasterxml.jackson.core:jackson-core:2.+",
+			"com.fasterxml.jackson.core:jackson-databind:2.+",
+			"com.fasterxml.jackson.core:jackson-annotations:2.+",
+			"com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.+",
+			"com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.+",
+			"com.fasterxml.jackson.module:jackson-module-parameter-names:2.+")
+	implementation("com.fasterxml.jackson.module:jackson-module-blackbird:2.+")
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+		vendor = JvmVendorSpec.BELLSOFT
+	}
+}
+println "[INFO] ${project.group}:${project.name}:$version  ⇒  ${tasks.jar.archiveFileName.get()} # JVM: ${System.getProperty("java.version")}  Gradle: ${gradle.gradleVersion}"
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.compilerArgs.addAll(['-Xlint:all,-serial', '-parameters'])
+	//options.release.set(17)
+	options.deprecation = true
+	options.debug = true
+}
+
+lombok { version = 'latest.release' }
