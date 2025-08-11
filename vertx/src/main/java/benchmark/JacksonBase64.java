@@ -119,7 +119,7 @@ public class JacksonBase64 {
 					DatabindCodec.mapper().writeValueAsString(map),
 					mapper.writeValueAsString(map)
 			))));
-		LOGGER.info("Same Json!");
+		log.info("Same Json!");
 
 		Options opt = new OptionsBuilder()
 			.include(JacksonBase64.class.getSimpleName())
