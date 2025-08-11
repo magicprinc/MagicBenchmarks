@@ -10,6 +10,7 @@ import io.smallrye.mutiny.unchecked.UncheckedConsumer;
 import io.vertx.core.json.jackson.DatabindCodec;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -32,6 +33,7 @@ import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.google.common.base.Verify.verify;
@@ -58,10 +60,10 @@ import static com.google.common.base.Verify.verify;
 public class JacksonBase64 {
 
 	static final List<Map<String,byte[]>> SAMPLES = IntStream.range(50_000, 50_100).mapToObj(i->{
-			var bytes = new byte[i*4];
+			val bytes = new byte[i*4];
 			ThreadLocalRandom.current().nextBytes(bytes);
 			return Map.of(Integer.toString(i), bytes);
-		}).toList();
+		}).collect(Collectors.toList());
 
 	static final TypeReference<Map<String,byte[]>> MAP_TYPE = new TypeReference<>(){};
 
