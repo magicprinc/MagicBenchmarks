@@ -29,8 +29,13 @@ dependencies {
 	implementation("com.google.guava:guava:latest.release")
 }
 
+tasks.withType(JavaExec).configureEach {
+	jvmArgs += ["--add-opens", "java.base/sun.misc=ALL-UNNAMED"]
+}
+
 jmh {
-    jmhVersion = '1.37'
+	jmhVersion = '1.37'
+	jvmArgs = ["--add-opens", "java.base/sun.misc=ALL-UNNAMED", "-Xlint:-deprecation"]
 }
 println "[INFO] ${project.group}:${project.name}:$version  ⇒  ${tasks.jar.archiveFileName.get()} # JVM: ${System.getProperty("java.version")}  Gradle: ${gradle.gradleVersion}"
 
