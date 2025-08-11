@@ -48,6 +48,8 @@ public class StringGetBytesBenchmark {
 
 	// @Setup(Level.Trial) public void setUp()
 	static {
+		System.out.println(System.getProperty("java.specification.version"));
+		System.out.println(System.getProperty("java.version"));
 		data = BASE.repeat(50)+Math.random();
 		System.out.println(data);
 
