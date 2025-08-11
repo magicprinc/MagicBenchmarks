@@ -1,0 +1,43 @@
+plugins {
+	id 'java'
+	id 'application'
+	id 'me.champeau.jmh' version 'latest.release'
+}
+
+repositories {
+	mavenLocal()
+	mavenCentral {
+		mavenContent { releasesOnly() }
+	}
+	google()
+	maven { url = 'https://jitpack.io' }
+}
+
+application {
+	mainClass = 'jnats.StringGetBytesBenchmark'
+}
+
+dependencies {
+	jmh 'org.openjdk.jmh:jmh-core:1.+'
+	jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.+'
+	jmhAnnotationProcessor('org.openjdk.jmh:jmh-generator-annprocess:1.+')
+	annotationProcessor('org.openjdk.jmh:jmh-generator-annprocess:1.+') // 🤷‍♀️
+
+	implementation 'org.openjdk.jmh:jmh-core:1.+'
+	implementation 'org.openjdk.jmh:jmh-generator-annprocess:1.+'
+
+	implementation("com.google.guava:guava:latest.release")
+}
+
+jmh {
+    jmhVersion = '1.37'
+}
+println "[INFO] ${project.group}:${project.name}:$version  ⇒  ${tasks.jar.archiveFileName.get()} # JVM: ${System.getProperty("java.version")}  Gradle: ${gradle.gradleVersion}"
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.compilerArgs.addAll(['-Xlint:all,-serial', '-parameters'])
+	//options.release.set(17)
+	options.deprecation = true
+	options.debug = true
+}
