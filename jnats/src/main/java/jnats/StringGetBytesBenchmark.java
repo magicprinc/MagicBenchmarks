@@ -16,40 +16,47 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.*;
 
 /**
- Benchmark                             Mode  Cnt        Score          Error  Units
- StringGetBytesBenchmark.iso88591     thrpt    3  4829818,688 ± 2485312,187  ops/s
- StringGetBytesBenchmark.rawIso88591  thrpt    3  4826448,322 ± 1332517,925  ops/s
- StringGetBytesBenchmark.usAscii      thrpt    3  1580261,242 ±  829945,617  ops/s
- StringGetBytesBenchmark.utf8         thrpt    3   538043,175 ±  540737,007  ops/s
+ https://github.com/openjdk/jmh
+ https://www.baeldung.com/java-microbenchmark-harness
 
- 4829818/1580261 = 3
- ⇒ ISO_8859_1 is 3 ^ times faster than US_ASCII
- */
+ Benchmark                                    Mode  Cnt         Score         Error  Units
+ StringGetBytesBenchmark.rawIso88591_direct  thrpt    5  52688916,779 ± 1330213,604  ops/s
+ StringGetBytesBenchmark.rawIso88591_1       thrpt    5   4994702,469 ±  164145,042  ops/s
+ StringGetBytesBenchmark.iso88591_2          thrpt    5   5088032,248 ±  101246,895  ops/s
+ StringGetBytesBenchmark.usAscii_3           thrpt    5   1733596,022 ±   49036,954  ops/s
+ StringGetBytesBenchmark.utf8_4              thrpt    5    556368,909 ±   45252,563  ops/s
+ StringGetBytesBenchmark.manualIso88591_5    thrpt    5    452574,288 ±   11224,975  ops/s
+
+ ThroughputA/B
+ ISO_8859_1 is 2-3 times faster than US_ASCII
+
+ 52688916/452574 = 116 😱 getBytes direct into target array is 116 (!!!) times faster than manual for-loop-copy 🔥
+*/
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 3, time = 3, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 3, timeUnit = TimeUnit.SECONDS)
 @Threads(1)
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1, jvmArgs = {
-	"-XX:+UseParallelGC", "-XX:+UseCompressedOops", "-XX:+DoEscapeAnalysis", "-Xmx4G"
+	"-XX:+UseParallelGC", "-XX:+UseCompressedOops", "-Xmx4G",
+	"-showversion",
+	"--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow" // JDK 24
 	//, "-XX:CompileCommand=inline,java/lang/String.charAt"
 })
 @OutputTimeUnit(TimeUnit.SECONDS)
 @State(Scope.Thread)
 public class StringGetBytesBenchmark {
-
 	private static final String BASE = "Some US-ASCII with few 128..255 and randomness × \u00A0 !";
-
 	private static String data;
 
 	// @Setup(Level.Trial) public void setUp()
 	static {
 		System.out.println(System.getProperty("java.specification.version"));
-		System.out.println(System.getProperty("java.version"));
 		data = BASE.repeat(50)+Math.random();
 		System.out.println(data);
 
@@ -61,29 +68,51 @@ public class StringGetBytesBenchmark {
 		System.out.println(us);
 		assert "Some US-ASCII with few 128..255 and randomness ? ? !".equals(us);
 	}
+	{
+		assert Arrays.equals(iso88591_2(), manualIso88591_5());
+		assert Arrays.equals(iso88591_2(), rawIso88591_1());
+	}
 
 	/// as an upper bound
 	@Benchmark
-	public byte[] utf8() {
+	public byte[] utf8_4 () {
 		return data.getBytes(StandardCharsets.UTF_8);
 	}
 
 	@Benchmark
-	public byte[] iso88591() {
+	public byte[] iso88591_2 () {
 		return data.getBytes(ISO_8859_1);
 	}
 
 	@Benchmark
-	public byte[] usAscii() {
+	public byte[] usAscii_3 () {
 		return data.getBytes(US_ASCII);
 	}
 
-	@Benchmark
-	@SuppressWarnings("deprecation")
-	public byte[] rawIso88591() {
+	/// ! can be used to copy directly into target array
+	@Benchmark  @SuppressWarnings("deprecation")
+	public byte[] rawIso88591_1 () {
 		int len = data.length();
 		byte[] bytes = new byte[len];
 		data.getBytes(0, len, bytes, 0);// deprecated
+		return bytes;
+	}
+
+	@Benchmark  @SuppressWarnings("deprecation")
+	public byte[] rawIso88591_direct () {
+		int len = data.length();
+		data.getBytes(0, len, targetArray, 0);
+		return targetArray;
+	}
+	final byte[] targetArray = new byte[50_000];// in reality this is some array passed as argument
+
+	@Benchmark
+	public byte[] manualIso88591_5 () {
+		int len = data.length();
+		byte[] bytes = new byte[len];
+		for (int i = 0; i < len; i++){
+			bytes[i] = (byte) data.charAt(i);
+		}
 		return bytes;
 	}
 
