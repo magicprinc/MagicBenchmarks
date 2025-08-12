@@ -34,9 +34,9 @@ import static java.nio.charset.StandardCharsets.*;
  StringGetBytesBenchmark.manualIso88591_5    thrpt    5    452574,288 ±   11224,975  ops/s
 
  ThroughputA/B
- ISO_8859_1 is 2-3 times faster than US_ASCII
+ ISO_8859_1 is 2-3 times faster than US_ASCII (for ASCII Strings!)
 
- 52688916/452574 = 116 😱 getBytes direct into target array is 116 (!!!) times faster than manual for-loop-copy 🔥
+ 52688916/452574 = 116 😱 getBytes direct into a target array is 116 (!!!) times faster than manual for-loop-copy 🔥
 */
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 3, timeUnit = TimeUnit.SECONDS)
@@ -44,7 +44,7 @@ import static java.nio.charset.StandardCharsets.*;
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1, jvmArgs = {
 	"-XX:+UseParallelGC", "-XX:+UseCompressedOops", "-Xmx4G",
-	"-showversion",
+	"-showversion", "-ea",
 	"--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow" // JDK 24
 	//, "-XX:CompileCommand=inline,java/lang/String.charAt"
 })
@@ -52,10 +52,9 @@ import static java.nio.charset.StandardCharsets.*;
 @State(Scope.Thread)
 public class StringGetBytesBenchmark {
 	private static final String BASE = "Some US-ASCII with few 128..255 and randomness × \u00A0 !";
-	private static String data;
+	private static String data;// not final ⇒ not const
 
-	// @Setup(Level.Trial) public void setUp()
-	static {
+	static {// @Setup(Level.Trial) public void setUp() → doesn't work 🤔
 		System.out.println(System.getProperty("java.specification.version"));
 		data = BASE.repeat(50)+Math.random();
 		System.out.println(data);
@@ -68,36 +67,31 @@ public class StringGetBytesBenchmark {
 		System.out.println(us);
 		assert "Some US-ASCII with few 128..255 and randomness ? ? !".equals(us);
 	}
-	{
-		assert Arrays.equals(iso88591_2(), manualIso88591_5());
-		assert Arrays.equals(iso88591_2(), rawIso88591_1());
-	}
 
-	/// as an upper bound
-	@Benchmark
+	@Benchmark  // simply to show the scale
 	public byte[] utf8_4 () {
 		return data.getBytes(StandardCharsets.UTF_8);
 	}
 
 	@Benchmark
 	public byte[] iso88591_2 () {
-		return data.getBytes(ISO_8859_1);
+		return data.getBytes(ISO_8859_1); // first 256 Unicode chars
 	}
 
 	@Benchmark
 	public byte[] usAscii_3 () {
-		return data.getBytes(US_ASCII);
+		return data.getBytes(US_ASCII); // first 128 Unicode chars
 	}
 
-	/// ! can be used to copy directly into target array
 	@Benchmark  @SuppressWarnings("deprecation")
 	public byte[] rawIso88591_1 () {
 		int len = data.length();
 		byte[] bytes = new byte[len];
-		data.getBytes(0, len, bytes, 0);// deprecated
+		data.getBytes(0, len, bytes, 0);// deprecated: first 256 Unicode chars
 		return bytes;
 	}
 
+	/// getBytes can be used to copy directly into a target array
 	@Benchmark  @SuppressWarnings("deprecation")
 	public byte[] rawIso88591_direct () {
 		int len = data.length();
@@ -106,7 +100,7 @@ public class StringGetBytesBenchmark {
 	}
 	final byte[] targetArray = new byte[50_000];// in reality this is some array passed as argument
 
-	@Benchmark
+	@Benchmark // simply to show the scale
 	public byte[] manualIso88591_5 () {
 		int len = data.length();
 		byte[] bytes = new byte[len];
@@ -118,25 +112,27 @@ public class StringGetBytesBenchmark {
 
 
 	public static void main (String[] args) throws RunnerException {
+		StringGetBytesBenchmark x = new StringGetBytesBenchmark();
+		assert Arrays.equals(x.iso88591_2(), x.manualIso88591_5());
+		assert Arrays.equals(x.iso88591_2(), x.rawIso88591_1());
+
 		Options opt = new OptionsBuilder()
 			.include(StringGetBytesBenchmark.class.getSimpleName())
 			.build();
 
 		new Runner(opt).run();
-/*
-Options opt = new OptionsBuilder()
-              .include(this.getClass().getName() + ".*")
-              .mode (Mode.AverageTime)
-              .timeUnit(TimeUnit.MICROSECONDS)
-              .warmupTime(TimeValue.seconds(1))
-              .warmupIterations(2)
-              .measurementTime(TimeValue.seconds(1))
-              .measurementIterations(2)
-              .threads(2)
-              .forks(1)
-              .shouldFailOnError(true)
-              .shouldDoGC(true)
-              .build();
-          new Runner(opt).run(); */
+/* Options opt ^= new OptionsBuilder()
+					.include(this.getClass().getName() + ".*")
+					.mode (Mode.AverageTime)
+					.timeUnit(TimeUnit.MICROSECONDS)
+					.warmupTime(TimeValue.seconds(1))
+					.warmupIterations(2)
+					.measurementTime(TimeValue.seconds(1))
+					.measurementIterations(2)
+					.threads(2)
+					.forks(1)
+					.shouldFailOnError(true)
+					.shouldDoGC(true)
+					.build();	*/
 	}
 }
