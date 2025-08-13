@@ -24,10 +24,12 @@ import java.util.stream.IntStream;
  https://github.com/openjdk/jmh
  https://www.baeldung.com/java-microbenchmark-harness
 
- Benchmark                                    Mode  Cnt         Score         Error  Units
+ Not fair 😭🙏
+ Benchmark                    Mode  Cnt     Score     Error  Units
+ LambdaBenchmark.directCode  thrpt    5  4258,070 ± 861,317  ops/s
+ LambdaBenchmark.lambda      thrpt    5  1459,209 ±  96,379  ops/s
 
-
- ThroughputA/B
+ 4258/1459=2.9
 */
 @Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 5, timeUnit = TimeUnit.SECONDS)
